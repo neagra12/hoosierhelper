@@ -12,6 +12,7 @@ const HoosierHelper = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [lastBuilding, setLastBuilding] = useState(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -313,6 +314,49 @@ const HoosierHelper = () => {
     const currentHour = new Date().getHours();
     const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
     
+    // PRIORITY: Check for distance queries with context FIRST
+    if ((msg.includes('how far') || msg.includes('distance') || (msg.includes('from') && lastBuilding)) && lastBuilding) {
+      // Try to find the destination building
+      let destination = null;
+      for (const [code, bldg] of Object.entries(buildings)) {
+        const nameWords = bldg.name.toLowerCase().split(' ');
+        const nicknameWords = bldg.nickname.toLowerCase().split(' ');
+        
+        if (msg.includes(bldg.name.toLowerCase()) || 
+            msg.includes(bldg.nickname.toLowerCase()) ||
+            nameWords.some(word => word.length > 3 && msg.includes(word)) ||
+            nicknameWords.some(word => word.length > 3 && msg.includes(word))) {
+          destination = bldg;
+          break;
+        }
+      }
+      
+      if (destination) {
+        const from = lastBuilding.toLowerCase();
+        const to = destination.nickname.toLowerCase();
+        
+        // Predefined common routes with times
+        if ((from.includes('luddy') && to.includes('forest')) || (from.includes('forest') && to.includes('luddy'))) {
+          return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ **10-12 minutes walk** (~0.5 miles)\n\n**Route:**\n• Head southeast through campus\n• Pleasant walk through central areas\n\n**Options:**\n🚌 Campus bus Route E serves this area\n🚶 Walking is nice when weather is good\n\n🗺️ Exact route: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU Bloomington')}/${encodeURIComponent(destination.name + ' IU Bloomington')}`;
+        }
+        
+        if ((from.includes('luddy') && to.includes('imu')) || (from.includes('imu') && to.includes('luddy'))) {
+          return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ **5-7 minutes walk** (~0.3 miles)\n\n**Route:**\n• Very close! Down 7th Street\n• Super easy between classes\n\n💡 **Perfect for:** Grabbing food at IMU between Luddy classes!\n\n🗺️ Exact route: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU Bloomington')}/${encodeURIComponent(destination.name + ' IU Bloomington')}`;
+        }
+        
+        if ((from.includes('luddy') && to.includes('wells')) || (from.includes('wells') && to.includes('luddy'))) {
+          return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ **3-5 minutes walk** (~0.2 miles)\n\n**Route:**\n• Super close neighbors!\n• Just across the street area\n\n💡 **Perfect for:** Quick study break or library visit!\n\n🗺️ Exact route: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU Bloomington')}/${encodeURIComponent(destination.name + ' IU Bloomington')}`;
+        }
+        
+        if ((from.includes('luddy') && to.includes('kelley')) || (from.includes('kelley') && to.includes('luddy'))) {
+          return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ **7-10 minutes walk** (~0.4 miles)\n\n**Route:**\n• Head down 10th Street\n• Easy walk through central campus\n\n💡 Plenty of time between classes!\n\n🗺️ Exact route: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU Bloomington')}/${encodeURIComponent(destination.name + ' IU Bloomington')}`;
+        }
+        
+        // Default for any building pair
+        return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n\n**Estimated Time:**\n• Central campus: 5-10 minutes\n• Cross-campus: 15-20 minutes\n• To athletics: 15-20 minutes\n\n**Get directions:**\n🗺️ Google Maps: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU Bloomington')}/${encodeURIComponent(destination.name + ' IU Bloomington')}\n🗺️ IU Map: map.iu.edu\n\n💡 **Tip:** 10 min between classes is usually enough!`;
+      }
+    }
+    
     // Help and Welcome
     if (msg.includes('help') || msg === 'hi' || msg === 'hello' || msg === 'hey' || msg.includes('what can you')) {
       return `**🎓 Hoosier Helper - Your AI Campus Guide**\n\nI know everything about IU Bloomington! Ask me about:\n\n**🏛️ Buildings (100+)**\n"Where is Luddy?" • "What's in Ballantine?" • "Nearest bathroom to IMU?"\n\n**🍕 Dining and Food**\n"What's open now?" • "Best food court?" • "Late night food?"\n\n**📚 Study Spots**\n"Quiet study space" • "Group room available?" • "24/7 access?"\n\n**☕ Coffee Shops**\n"Coffee near me?" • "Best cafe?" • "Starbucks locations?"\n\n**🚌 Getting Around**\n"Campus bus info" • "Walking time calculator" • "Bike parking?"\n\n**📅 Campus Life**\n"Events tonight?" • "Basketball schedule?" • "Free activities?"\n\n**💡 Pro Tips**\n"Best WiFi spots" • "Avoid crowds" • "Hidden gems"\n\n**Try:** "I'm at Luddy, where's the nearest food?" or "Best place to study for finals?"`;
@@ -341,16 +385,15 @@ const HoosierHelper = () => {
     
     // Coffee - comprehensive
     if (msg.includes('coffee') || msg.includes('cafe') || msg.includes('caffeine') || msg.includes('starbucks')) {
-      return `☕ **Complete IU Coffee Guide**\n\n**ON CAMPUS:**\n\n☕ **IMU Starbucks** (Main floor)\n→ Pros: Convenient, full menu\n→ Cons: PACKED 8-10am and 1-3pm\n→ Tip: Mobile order or go off-peak!\n\n☕ **Campus Cafes** (Various locations)\n→ Eigenmann Cafe - Quieter alternative\n→ O'Neill Cafe - Hidden gem\n→ Multiple Dunkin' locations\n\n**OFF CAMPUS (Walking Distance):**\n\n⭐ **Soma Coffee House** - Kirkwood Ave\n→ Artisan coffee, amazing vibe\n→ Student favorite, great study spot\n→ Local and independent\n\n⭐ **Hopscotch Coffee** - Downtown\n→ Hip atmosphere, good for working\n→ Excellent espresso drinks\n\n⭐ **Pourhouse Cafe** - Multiple locations\n→ Local chain, reliable quality\n→ Good for meetings/study groups\n\n⭐ **Crumble Coffee** - Near campus\n→ Pastries + coffee combo\n→ Cozy atmosphere\n\n**LATE NIGHT CAFFEINE:**\n• Bookmarket (Wells Library) - Open latest\n• Some residence hall c-stores\n• Gas stations on 3rd St\n\n**☕ CROWD AVOIDANCE STRATEGY:**\n• IMU Starbucks: Skip 8-10am and 12-3pm\n• Best times: Before 8am, after 3pm\n• Weekends are much quieter\n\n💡 **Pro tip:** Keep reusable cup - many places give discounts!`;
+      return `☕ **Complete IU Coffee Guide**\n\n**ON CAMPUS:**\n\n☕ **Starbucks (3 Locations)**\n→ IMU Starbucks (Main floor) - Busiest, mobile order!\n→ McNutt Starbucks - Convenient for residents\n→ Read Hall Starbucks - Quietest option\n→ Tip: PACKED 8-10am & 1-3pm, mobile order ahead!\n\n☕ **Campus Cafes**\n→ Eigenmann Cafe - Rotating local cuisine\n→ O'Neill Cafe - All-day breakfast!\n→ Ballantine Cafe - Quick coffee between classes\n→ Education Cafe - Near Wright Ed\n→ Eskenazi Museum Cafe - Coffee + art\n→ Godfrey Cafe - Mediterranean vibes\n→ Hodge Cafe - In Kelley building\n\n**OFF CAMPUS (Walking Distance):**\n\n⭐ **Soma Coffee House** - Kirkwood Ave\n→ Artisan coffee, amazing vibe\n→ Student favorite, great study spot\n→ Local and independent\n\n⭐ **Hopscotch Coffee** - Downtown\n→ Hip atmosphere, good for working\n→ Excellent espresso drinks\n\n⭐ **Pourhouse Cafe** - Multiple locations\n→ Local chain, reliable quality\n→ Good for meetings/study groups\n\n⭐ **Crumble Coffee** - Near campus\n→ Pastries + coffee combo\n→ Cozy atmosphere\n\n**LATE NIGHT CAFFEINE:**\n• Bookmarket (Wells Library) - Open latest\n• Some residence hall c-stores\n• Gas stations on 3rd St\n\n**☕ CROWD AVOIDANCE STRATEGY:**\n• IMU Starbucks: Skip 8-10am & 12-3pm\n• Best times: Before 8am, after 3pm\n• Weekends are much quieter\n\n💡 **Pro tip:** Keep reusable cup - many places give discounts!`;
     }
     
     // Transportation - should be checked BEFORE building search
     if (msg.includes('bus') || msg.includes('transport') || msg.includes('shuttle') || msg.includes('get to')) {
-      return `🚌 **IU Campus Transportation**\n\n**CAMPUS BUS SERVICE:**\n\n**Main Routes:**\n• Route B - Main campus loop\n• Route E - East campus\n• Route F - Far east areas\n• Route W - West/northwest\n• Route X - Express service\n\n**Schedule:**\n• Mon-Fri: 7am-6pm (frequent service)\n• Evenings: Limited routes\n• Weekends: Reduced schedule\n• Breaks: Minimal service\n\n**💡 MUST-HAVE APPS:**\n📱 IU Mobile app → Search "Bus Status"\n📱 ETA Spot app → Real-time tracking\n🌐 bloomingtontransit.etaspot.net\n\n**PRO TIPS:**\n• Buses are FREE with IU ID!\n• Track in real-time (don't just wait!)\n• Peak times (10am-3pm) = PACKED\n• Leave 10-15 min buffer for connections\n• Bad weather = extra crowded\n\n**ALTERNATIVE TRANSPORT:**\n🚶 Walking - Most of campus is 15-20 min\n🚲 Bikes - Racks everywhere, Pace bikes available\n🛴 Scooters - VeoRide and Spin around town\n\n💡 **Secret:** Walking is often faster than waiting for the bus!`;
+      return `🚌 **IU Campus Transportation**\n\n**CAMPUS BUS SERVICE:**\n\n**Main Routes:**\n• Route B - Main campus loop\n• Route E - East campus\n• Route F - Far east areas\n• Route W - West/northwest\n• Route X - Express service\n• **Route CM** - Campus/Mall Shuttle\n  → Begins at stadium, serves central campus\n  → All neighborhoods to College Mall & Jackson Creek Shopping Center\n\n**Schedule:**\n• Mon-Fri: 7am-6pm (frequent service)\n• Evenings: Limited routes\n• Weekends: Reduced schedule\n• Breaks: Minimal service\n\n**💡 MUST-HAVE APPS:**\n📱 IU Mobile app → Search "Bus Status"\n📱 ETA Spot app → Real-time tracking\n🌐 bloomingtontransit.etaspot.net\n\n**PRO TIPS:**\n• Buses are FREE with IU ID!\n• Track in real-time (don't just wait!)\n• Peak times (10am-3pm) = PACKED\n• Leave 10-15 min buffer for connections\n• Bad weather = extra crowded\n• CM Route great for shopping trips!\n\n**ALTERNATIVE TRANSPORT:**\n🚶 Walking - Most of campus is 15-20 min\n🚲 Bikes - Racks everywhere, Pace bikes available\n🛴 Scooters - VeoRide and Spin around town\n\n💡 **Secret:** Walking is often faster than waiting for the bus!`;
     }
     
     // Building search - enhanced with better matching
-    let lastQueriedBuilding = null;
     
     // First pass: exact or close name matches
     for (const [code, bldg] of Object.entries(buildings)) {
@@ -364,7 +407,8 @@ const HoosierHelper = () => {
       
       if (hasExactMatch || hasNameMatch || hasNicknameMatch) {
         
-        lastQueriedBuilding = bldg.name;
+        // Remember this building for future context
+        setLastBuilding(bldg.name);
         
         // Check if they're asking about nearby food
         if (msg.includes('food') || msg.includes('eat') || msg.includes('dining') || msg.includes('nearby')) {
@@ -378,7 +422,9 @@ const HoosierHelper = () => {
     // Second pass: building code match only (for queries like "What is IF?")
     for (const [code, bldg] of Object.entries(buildings)) {
       if (msg.includes(` ${code.toLowerCase()} `) || msg.includes(`${code.toLowerCase()}?`) || msg.includes(`${code.toLowerCase()}.`)) {
-        lastQueriedBuilding = bldg.name;
+        
+        // Remember this building for future context
+        setLastBuilding(bldg.name);
         
         // Check if they're asking about nearby food
         if (msg.includes('food') || msg.includes('eat') || msg.includes('dining') || msg.includes('nearby')) {
@@ -417,9 +463,51 @@ const HoosierHelper = () => {
       return `📶 **IU WiFi Guide**\n\n**NETWORKS:**\n• **IU-Secure** - Fast, encrypted (USE THIS!)\n• **attwifi** - Slower, guest access\n\n**SETUP:**\n1. Connect to IU-Secure\n2. Login with IU username and password\n3. Device is registered automatically\n\n**FASTEST WIFI LOCATIONS:**\n• Luddy Hall (ridiculously fast)\n• Wells Library\n• Kelley School\n• Most academic buildings\n\n**TROUBLESHOOTING:**\n• Forget network and reconnect\n• Check uits.iu.edu/wifi\n• Contact UITS: uits.iu.edu/help\n\n💡 **Pro tip:** Always use IU-Secure over attwifi for speed and security!`;
     }
     
-    // Where is / directions
-    if (msg.includes('where') || msg.includes('find') || msg.includes('direction') || msg.includes('locate')) {
-      return `📍 **Finding Buildings:**\n\n**RESOURCES:**\n• map.iu.edu - Interactive campus map\n• IU Mobile app - Walking directions\n• Google Maps - Works well for IU\n\n**QUICK REFERENCES:**\n• Luddy Hall (IF) - 10th and Fee Lane\n• Wells Library (LI) - East 10th St\n• IMU (UB) - East 7th St\n• Kelley (HH) - East 10th St\n• SRSC (RB) - Near Assembly Hall\n\n💡 **TIPS:**\n• Building codes (like IF, LI) are on your class schedule\n• Room numbers: First digit = floor\n• Ask me about specific buildings!\n• Most buildings 10-15 min walk from Sample Gates\n\n**Try asking:** "Where is Ballantine Hall?" or "What's in Simon Hall?"`;
+    // Where is / directions / distance
+    if (msg.includes('where') || msg.includes('find') || msg.includes('direction') || msg.includes('locate') || msg.includes('how far') || msg.includes('distance') || msg.includes('from')) {
+      
+      // Check if asking about distance between buildings
+      if ((msg.includes('how far') || msg.includes('distance') || msg.includes('from')) && lastBuilding) {
+        // Try to find the destination building
+        let destination = null;
+        for (const [code, bldg] of Object.entries(buildings)) {
+          const nameWords = bldg.name.toLowerCase().split(' ');
+          const nicknameWords = bldg.nickname.toLowerCase().split(' ');
+          
+          if (msg.includes(bldg.name.toLowerCase()) || 
+              msg.includes(bldg.nickname.toLowerCase()) ||
+              nameWords.some(word => word.length > 4 && msg.includes(word)) ||
+              nicknameWords.some(word => word.length > 4 && msg.includes(word))) {
+            destination = bldg;
+            break;
+          }
+        }
+        
+        if (destination) {
+          // Calculate approximate distance
+          const from = lastBuilding.toLowerCase();
+          const to = destination.nickname.toLowerCase();
+          
+          // Predefined distances
+          if ((from.includes('luddy') && to.includes('forest')) || (from.includes('forest') && to.includes('luddy'))) {
+            return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ Approximately **10-12 minutes walk**\n\n**Route:**\n• Exit ${lastBuilding}\n• Head southeast on 10th St\n• Walk to Forest Quad area\n• ~0.5 miles\n\n**Tips:**\n• Consider taking campus bus if in a hurry\n• Route E serves this area\n• Pleasant walk through campus!\n\n🗺️ Get exact directions: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU')}/${encodeURIComponent(destination.name + ' IU')}`;
+          }
+          
+          if ((from.includes('luddy') && to.includes('imu')) || (from.includes('imu') && to.includes('luddy'))) {
+            return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n⏱️ Approximately **5-7 minutes walk**\n\n**Route:**\n• Very close! Just down 7th Street\n• ~0.3 miles\n\n**Tips:**\n• Easy walk between classes\n• Grab food at IMU between Luddy classes\n\n🗺️ Get exact directions: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU')}/${encodeURIComponent(destination.name + ' IU')}`;
+          }
+          
+          // Default response for any building pair
+          return `🚶 **Walking Distance:**\n\n**${lastBuilding} → ${destination.name}**\n\n**Estimated Time:**\n• Central campus buildings: 5-10 minutes\n• Cross-campus: 15-20 minutes\n• To athletic complex: 15-20 minutes\n\n**Get exact directions:**\n🗺️ Google Maps: https://www.google.com/maps/dir/${encodeURIComponent(lastBuilding + ' IU')}/${encodeURIComponent(destination.name + ' IU')}\n🗺️ IU Campus Map: map.iu.edu\n\n**Tips:**\n• 10 minutes between classes is usually enough\n• Consider campus bus for longer distances\n• Track live buses with IU Mobile app`;
+        }
+      }
+      
+      // General distance info
+      if (msg.includes('how far') || msg.includes('distance')) {
+        return `🚶 **Walking Distances at IU:**\n\n**Quick Reference:**\n• Luddy ↔ IMU: ~5-7 min walk\n• Luddy ↔ Wells Library: ~3-5 min\n• Luddy ↔ Kelley: ~7-10 min\n• Luddy ↔ Forest: ~10-12 min\n• IMU ↔ Wells: ~5 min\n• IMU ↔ Kelley: ~3 min\n• Wells ↔ Kelley: ~2-3 min\n• Any building ↔ Assembly Hall: ~15-20 min\n\n**💡 General Rules:**\n• Central campus buildings: 5-10 min apart\n• Campus to athletic complex: 15-20 min\n• East to west campus: 20-25 min\n• Average walking speed: 15-20 min per mile\n\n**Tips:**\n• Use Google Maps for exact routes\n• Campus bus for longer distances\n• Most classes 10 min apart (enough time!)\n• Leave extra time in winter/rain\n\n💡 **Ask:** "Where is [building]?" first, then "How far from [another building]?" for specific distances!`;
+      }
+      
+      return `📍 **Finding Buildings:**\n\n**RESOURCES:**\n• map.iu.edu - Interactive campus map\n• IU Mobile app - Walking directions\n• Google Maps - Works well for IU\n\n**QUICK REFERENCES:**\n• Luddy Hall (IF) - 10th and Fee Lane\n• Wells Library (LI) - East 10th St\n• IMU (UB) - East 7th St\n• Kelley (HH) - East 10th St\n• SRSC (RB) - Near Assembly Hall\n\n**💡 TIPS:**\n• Building codes (like IF, LI) are on your class schedule\n• Room numbers: First digit = floor\n• Ask me about specific buildings!\n• Most buildings 10-15 min walk from Sample Gates\n\n**Try asking:** "Where is Ballantine Hall?" or "What's in Simon Hall?" or "How far from Luddy to IMU?"`;
     }
     
     // Gym/fitness
