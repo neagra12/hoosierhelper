@@ -374,7 +374,7 @@ const HoosierHelper = () => {
         response += `**😴 Very Late/Early Morning:**\n• Almost everything is closed\n• Luddy Hall (24/7 with card access)\n• Some residence hall lounges\n\n💡 Dining opens around 7am!`;
       }
       
-      response += `\n_Check exact hours at dining.indiana.edu and libraries.indiana.edu_`;
+      response += `\nCheck exact hours at dining.indiana.edu`;
       return response;
     }
     
